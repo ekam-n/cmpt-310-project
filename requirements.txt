@@ -1,0 +1,19 @@
+# CMPT 310 Racecar — pinned dependencies
+# Python 3.10+ recommended (SB3 dropped 3.9 support after v2.7.1).
+#
+# Install with:
+#   pip install -r requirements.txt
+#
+# On macOS, box2d needs swig first. If `pip install` fails on box2d, run:
+#   brew install swig
+# then re-run the install.
+
+gymnasium[box2d]>=1.0.0
+stable-baselines3>=2.4.0
+torch>=2.3.0
+numpy>=1.26
+matplotlib>=3.7
+tensorboard>=2.14
+tqdm>=4.66
+rich>=13.0          # nicer progress_bar=True output
+opencv-python>=4.8  # required by WarpFrame (grayscale/resize)
