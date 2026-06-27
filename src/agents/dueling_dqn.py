@@ -23,7 +23,19 @@ Run from src/ once implemented:
     python -m agents.dueling_dqn
 """
 
-import torch.nn as nn
+import os
+from datetime import datetime
+
+from stable_baselines3 import DQN
+from stable_baselines3.common.callbacks import (
+    EvalCallback,
+    CheckpointCallback,
+    CallbackList,
+)
+
+from common import config
+from common.env_factory import make_vec
+
 
 # using same imports as original DQN/policies.py in case imports require a specific setup.
 from typing import Any
@@ -39,6 +51,7 @@ from stable_baselines3.common.torch_layers import (
     create_mlp,
 )
 from stable_baselines3.common.type_aliases import PyTorchObs, Schedule
+from stable_baselines3.dqn.policies import DQNPolicy
 
 
 # Starting from the base policy so we have a framework for what to implement
@@ -89,22 +102,99 @@ class DuelingQNetwork(BasePolicy):
     # this is where we  need to change the architecture to use both of the above mlp's
 
     def forward(self, obs: PyTorchObs) -> th.Tensor:
-        pass
+        features = self.q_net(self.extract_features, obs,
+                              self.features_extractor)
+        advantages = self.a_net(self.extract_features,
+                                obs, self.features_extractor)
+        # Q = V + (A -A.mean(dim= 1 )
+        q = features + (advantages - advantages.mean(dim=1, keepdim=True))
+        return q
 
+    # I think this should work as is?
     def _predict(self, observation: PyTorchObs, deterministic: bool = True) -> th.Tensor:
-        pass
+        q_values = self(observation)
+        # Greedy action
+        action = q_values.argmax(dim=1).reshape(-1)
+        return action
 
     def _get_constructor_parameters(self) -> dict[str, Any]:
-        pass
+        data = super()._get_constructor_parameters()
+
+        data.update(
+            dict(
+                net_arch=self.net_arch,
+                features_dim=self.features_dim,
+                activation_fn=self.activation_fn,
+                features_extractor=self.features_extractor,
+            )
+        )
+        return data
+
+
+class DuelingDQNPolicy(DQNPolicy):
+    def make_q_net(self):
+        return DuelingQNetwork(
+            observation_space=self.observation_space,
+            action_space=self.action_space,
+            features_extractor=self.features_extractor,
+            features_dim=self.features_dim,
+            net_arch=self.net_arch,
+            activation_fn=self.activation_fn,
+            normalize_images=self.normalize_images,
+        )
 
 
 def main():
+    log_dir = os.path.join(config.LOG_ROOT, "dueling_dqn")
+    os.makedirs(log_dir, exist_ok=True)
 
-    # TODO (Hargun/Evan): wire DuelingQNetwork into a custom DQNPolicy, then
-    # mirror the train/eval setup in baseline/train_baseline.py.
-    # Save to logs/dueling_dqn/ and keep callbacks + budget identical.
-    raise NotImplementedError("Dueling DQN not implemented yet")
+    # Use default reward (no shaping) for the baseline so contributions that
+    # change the reward have a clean reference. Flip use_reward_wrapper if your
+    # group decides the baseline should include the passthrough wrapper.
+    train_env = make_vec(use_reward_wrapper=False)
+    eval_env = make_vec(use_reward_wrapper=False)
+
+    eval_cb = EvalCallback(
+        eval_env,
+        best_model_save_path=log_dir,
+        log_path=log_dir,
+        eval_freq=config.EVAL_FREQ,
+        n_eval_episodes=config.N_EVAL_EPISODES,
+        deterministic=True,
+        render=False,
+    )
+    ckpt_cb = CheckpointCallback(
+        save_freq=config.EVAL_FREQ,
+        save_path=os.path.join(log_dir, "checkpoints"),
+    )
+
+    model = DQN(
+        "DuelingDQNPolicy",
+        train_env,
+        verbose=1,
+        tensorboard_log=os.path.join(log_dir, "tensorboard"),
+        **config.dqn_kwargs(),
+    )
+
+    model.learn(
+        total_timesteps=config.TOTAL_TIMESTEPS,
+        progress_bar=True,
+        callback=CallbackList([ckpt_cb, eval_cb]),
+    )
+
+    stamp = datetime.now().strftime("%Y%m%d_%H%M")
+    model.save(os.path.join(log_dir, f"final_model_{stamp}"))
+    print(f"\nSaved baseline model to {log_dir}")
+    print("Best model (by eval reward) is at best_model.zip in the same dir.")
+
+    train_env.close()
+    eval_env.close()
 
 
 if __name__ == "__main__":
     main()
+
+
+# TODO (Hargun/Evan): wire DuelingQNetwork into a custom DQNPolicy, then
+# mirror the train/eval setup in baseline/train_baseline.py.
+# Save to logs/dueling_dqn/ and keep callbacks + budget identical.
