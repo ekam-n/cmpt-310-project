@@ -32,6 +32,9 @@ Run from src/: python -m agents.double_dqn
 """
 
 from stable_baselines3 import DQN
+import torch as th
+import torch.nn.functional as F
+import fast_config as config
 
 class DoubleDQN(DQN):
     # override stable-baselines3/dqn/dqn.py train function
@@ -59,7 +62,7 @@ class DoubleDQN(DQN):
                 # use online network to determine action a*
                 # use the one with highest value
                 next_online_q_values = self.q_net(replay_data.next_observations)
-                next_action = nest_online_q_values.argmax(dim=1, keepdim=True)
+                next_action = next_online_q_values.argmax(dim=1, keepdim=True)
 
                 # evaluate Q value of action with target network
                 new_target_q_value = self.q_net_target(replay_data.next_observations)
