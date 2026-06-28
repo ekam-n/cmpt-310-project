@@ -20,8 +20,8 @@ from stable_baselines3.common.callbacks import (
     CallbackList,
 )
 
-from src.common import config
-from src.common.env_factory import make_vec
+from common import config
+from common.env_factory import make_vec
 
 
 def main():

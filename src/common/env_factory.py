@@ -12,8 +12,8 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack, VecTransposeImage
 from stable_baselines3.common.atari_wrappers import WarpFrame
 
-from src.common import config
-from src.envs.reward_wrapper import CarRacingRewardWrapper
+from common import config
+from envs.reward_wrapper import CarRacingRewardWrapper
 
 
 def make_env(render_mode=None, use_reward_wrapper=True):

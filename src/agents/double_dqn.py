@@ -34,13 +34,10 @@ Run from src/: python -m agents.double_dqn
 from stable_baselines3 import DQN
 import torch as th
 import torch.nn.functional as F
-<<<<<<< Updated upstream
-import fast_config as config
-=======
-from src.common import fast_config as config
+from common import fast_config as config
 from datetime import datetime
 import os
-from src.baseline.train_baseline import make_vec
+from baseline.train_baseline import make_vec
 import numpy as np
 
 from stable_baselines3.common.callbacks import (
@@ -48,7 +45,6 @@ from stable_baselines3.common.callbacks import (
    CheckpointCallback,
    CallbackList
 )
->>>>>>> Stashed changes
 
 class DoubleDQN(DQN):
     # override stable-baselines3/dqn/dqn.py train function
@@ -114,14 +110,9 @@ def main():
     # changed to use DoubleDQN instead of DQN
     # changed to save to logs/double_dqn, callbacks and budget identical to baseline
     
-<<<<<<< Updated upstream
-  log_dir = os.path.join(config.LOG_ROOT, "double_dqn")
-    os.makedirs(log_dir, exist_ok=True)
-
-=======
     log_dir = os.path.join(config.LOG_ROOT, "double_dqn")
     os.makedirs(log_dir, exist_ok=True)
->>>>>>> Stashed changes
+
     train_env = make_vec(use_reward_wrapper=False)
     eval_env = make_vec(use_reward_wrapper=False)
 

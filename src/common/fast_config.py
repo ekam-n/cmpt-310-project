@@ -21,7 +21,7 @@ N_STACK = 4                 # frame stacking for motion information
 N_ENVS = 1
 
 # --- Training budget (keep identical across all agents for fair comparison) ---
-TOTAL_TIMESTEPS = 20_000
+TOTAL_TIMESTEPS = 1000
 SEED = 42
 
 # --- DQN hyperparameters (SB3 defaults shown explicitly so everyone sees them) ---
