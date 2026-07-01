@@ -34,7 +34,7 @@ Run from src/: python -m agents.double_dqn
 from stable_baselines3 import DQN
 import torch as th
 import torch.nn.functional as F
-from common import fast_config as config
+from common import config
 from datetime import datetime
 import os
 from baseline.train_baseline import make_vec
