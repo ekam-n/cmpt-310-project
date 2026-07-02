@@ -1,5 +1,6 @@
 # Training artifacts (can be huge — don't commit)
 logs/
+figures/
 *.zip
 *.mp4
 *.npz
