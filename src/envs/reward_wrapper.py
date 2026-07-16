@@ -15,16 +15,15 @@ from gymnasium import RewardWrapper
 
 
 class CarRacingRewardWrapper(RewardWrapper):
-    def __init__(
-        self,
-        env,
-        speed_coef=0.0,
-        smoothness_coef=0.0,
-        on_track_reward=0.0,
-        movement_penalty=0.0,
-        position_threshold=0.5,
-        progress_coef=0.0,
-    ):
+
+    def __init__(self, env,
+                 speed_coef=0.01,
+                 smoothness_coef=-0.02,
+                 on_track_reward=0.05,
+                 movement_penalty=-0.05,
+                 position_threshold=0.05,
+                 progress_coef=0.1):
+        print("using custom wrapper")
         super().__init__(env)
         self.speed_coef = speed_coef
         self.smoothness_coef = smoothness_coef
@@ -42,12 +41,14 @@ class CarRacingRewardWrapper(RewardWrapper):
         return obs, info
 
     def step(self, action):
+
         obs, reward, terminated, truncated, info = self.env.step(action)
 
         new_pos = self._car_position()
         new_tiles = self._tile_count()
         speed = self._car_speed()
-        steering = action[0] if isinstance(action, (list, tuple, np.ndarray)) else 0.0
+        steering = action[0] if isinstance(
+            action, (list, tuple, np.ndarray)) else 0.0
 
         # discourage standing still
         if self.movement_penalty and self.last_position is not None:
@@ -58,13 +59,16 @@ class CarRacingRewardWrapper(RewardWrapper):
 
         # reward speed
         reward += speed * self.speed_coef
+
         # penalize jerky steering
         reward += abs(steering) * self.smoothness_coef
+
         # small per-step bonus for staying alive
         if not terminated and not truncated:
             reward += self.on_track_reward
         # bonus for new tiles (progress)
         progress = new_tiles - self.last_tile_count
+
         if progress > 0:
             reward += progress * self.progress_coef
 

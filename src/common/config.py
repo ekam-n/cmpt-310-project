@@ -13,29 +13,33 @@ agent files; change them here (or override explicitly and document why).
 
 # --- Environment ---
 ENV_ID = "CarRacing-v3"
-CONTINUOUS = False          # discrete action space (5 actions) -> required for DQN
+# discrete action space (5 actions) -> required for DQN
+CONTINUOUS = False
 GRAYSCALE = True            # WarpFrame converts to 84x84 grayscale
 N_STACK = 4                 # frame stacking for motion information
-N_ENVS = 1                  # parallel envs (keep at 1 for reproducibility/simplicity)
+# parallel envs (keep at 1 for reproducibility/simplicity)
+N_ENVS = 1
 
 # --- Training budget (keep identical across all agents for fair comparison) ---
-TOTAL_TIMESTEPS = 500_000
+TOTAL_TIMESTEPS = 7_50_000
 SEED = 42
 
 # --- DQN hyperparameters (SB3 defaults shown explicitly so everyone sees them) ---
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 5e-4
 BUFFER_SIZE = 100_000
-LEARNING_STARTS = 10_000     # steps of random play before learning begins
-BATCH_SIZE = 32
-TAU = 1.0                    # 1.0 = hard target update; <1.0 = Polyak (Ekam's research thread)
+LEARNING_STARTS = 5_000     # steps of random play before learning begins
+BATCH_SIZE = 64
+# 1.0 = hard target update; <1.0 = Polyak (Ekam's research thread)
+TAU = 1.0
 GAMMA = 0.99                 # discount factor
 TRAIN_FREQ = 4              # gradient update every N steps
-GRADIENT_STEPS = 1
-TARGET_UPDATE_INTERVAL = 1_000   # copy online -> target every N steps
-EXPLORATION_FRACTION = 0.2       # fraction of training over which epsilon decays
+GRADIENT_STEPS = 2
+TARGET_UPDATE_INTERVAL = 500   # copy online -> target every N steps
+EXPLORATION_FRACTION = 0.4       # fraction of training over which epsilon decays
 EXPLORATION_INITIAL_EPS = 1.0
 EXPLORATION_FINAL_EPS = 0.05
 
+FEATURES_DIMS = 4
 # --- Evaluation ---
 EVAL_FREQ = 25_000          # run eval every N timesteps during training
 N_EVAL_EPISODES = 20        # episodes averaged per evaluation
@@ -66,4 +70,5 @@ def dqn_kwargs():
         exploration_initial_eps=EXPLORATION_INITIAL_EPS,
         exploration_final_eps=EXPLORATION_FINAL_EPS,
         seed=SEED,
+        # features_dims=FEATURES_DIMS,
     )
