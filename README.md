@@ -63,9 +63,33 @@ is saved as `best_model.zip` in that folder.
 
 ### Watch training progress
 
+TensorBoard must be pointed at `src/logs/` — training scripts run from `src/`,
+so that's where logs land. From the **repo root**:
+
 ```bash
-tensorboard --logdir logs/
+tensorboard --logdir src/logs/
 ```
+
+(Running `tensorboard --logdir logs/` from the repo root finds nothing — that
+was why it appeared broken.) Then open http://localhost:6006.
+
+### Comparison charts & tables (for the writeup)
+
+`evaluate/plots.py` turns training logs into the figures we need. From `src/`:
+
+```bash
+# learning curves for every trained agent, overlaid (fast):
+python -m evaluate.plots
+
+# + final comparison table and per-metric bar charts (slow — rolls out episodes):
+python -m evaluate.plots --full --episodes 20
+```
+
+Outputs land in `src/figures/`: `learning_curves.png`, `comparison.csv`,
+`comparison.md`, and one bar chart per metric. It auto-discovers every agent
+under `src/logs/` — no configuration needed. For the canonical writeup
+figures, ONE machine should train all agents under the shared config and
+generate the figures in one place.
 
 ---
 
