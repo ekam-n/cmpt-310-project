@@ -13,6 +13,7 @@ agent files; change them here (or override explicitly and document why).
 
 # --- Environment ---
 ENV_ID = "CarRacing-v3"
+<<<<<<< HEAD
 CONTINUOUS = False
 GRAYSCALE = True
 N_STACK = 4
@@ -44,6 +45,38 @@ EXPLORATION_FINAL_EPS = 0.05      # still some exploration at the end
 EVAL_FREQ = 5_000
 N_EVAL_EPISODES = 10              # fewer episodes = faster eval
 LAP_COMPLETE_PERCENT = 0.95
+=======
+# discrete action space (5 actions) -> required for DQN
+CONTINUOUS = False
+GRAYSCALE = True            # WarpFrame converts to 84x84 grayscale
+N_STACK = 4                 # frame stacking for motion information
+# parallel envs (keep at 1 for reproducibility/simplicity)
+N_ENVS = 1
+
+# --- Training budget (keep identical across all agents for fair comparison) ---
+TOTAL_TIMESTEPS = 1000
+SEED = 42
+
+# --- DQN hyperparameters (SB3 defaults shown explicitly so everyone sees them) ---
+LEARNING_RATE = 1e-4
+BUFFER_SIZE = 10_000
+LEARNING_STARTS = 4_000     # steps of random play before learning begins
+BATCH_SIZE = 32
+# 1.0 = hard target update; <1.0 = Polyak (Ekam's research thread)
+TAU = 1.0
+GAMMA = 0.99                 # discount factor
+TRAIN_FREQ = 4              # gradient update every N steps
+GRADIENT_STEPS = 1
+TARGET_UPDATE_INTERVAL = 1_000   # copy online -> target every N steps
+EXPLORATION_FRACTION = 0.2       # fraction of training over which epsilon decays
+EXPLORATION_INITIAL_EPS = 1.0
+EXPLORATION_FINAL_EPS = 0.05
+
+# --- Evaluation ---
+EVAL_FREQ = 5_000          # run eval every N timesteps during training
+N_EVAL_EPISODES = 20        # episodes averaged per evaluation
+LAP_COMPLETE_PERCENT = 0.95  # % of tiles before a lap counts as complete
+>>>>>>> origin/lex
 
 # --- Paths ---
 LOG_ROOT = "./logs"
