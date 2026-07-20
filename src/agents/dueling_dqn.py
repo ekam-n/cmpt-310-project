@@ -18,7 +18,7 @@ advantages, improving learning efficiency and generalization.
 Run from src/ once implemented:
     python -m agents.dueling_dqn
 """
-# using same imports as original DQN/policies.py in case imports require a specific setup.
+import argparse
 import os
 from datetime import datetime
 
@@ -43,6 +43,8 @@ from stable_baselines3.common.torch_layers import (
 )
 from stable_baselines3.common.type_aliases import PyTorchObs, Schedule
 from stable_baselines3.dqn.policies import DQNPolicy
+
+from common.activation_functions import available_activation_names, get_activation_fn
 
 """ I had to change the config, reward wrappers and whatnot to get the thing to work
     I have no idea what we want to do about this, I dont want to modify the files in the
@@ -248,6 +250,14 @@ class DuelingDQNPolicy(DQNPolicy):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--activation",
+        default="elu",
+        choices=available_activation_names(),
+        help="Activation function used by the policy network.",
+    )
+    args = parser.parse_args()
 
     log_dir = os.path.join(config.LOG_ROOT, "dueling_dqn")
     os.makedirs(log_dir, exist_ok=True)
@@ -276,6 +286,7 @@ def main():
         train_env,
         verbose=1,
         tensorboard_log=os.path.join(log_dir, "tensorboard"),
+        policy_kwargs=dict(activation_fn=get_activation_fn(args.activation)),
         **config.dqn_kwargs(),
     )
 

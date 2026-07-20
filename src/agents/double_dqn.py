@@ -30,7 +30,7 @@ comparison (see common.config and common.env_factory).
 RUNNING:
 Run from src/: python -m agents.double_dqn
 """
-
+import argparse
 from stable_baselines3 import DQN
 import torch as th
 import torch.nn.functional as F
@@ -45,6 +45,8 @@ from stable_baselines3.common.callbacks import (
    CheckpointCallback,
    CallbackList
 )
+
+from common.activation_functions import available_activation_names, get_activation_fn
 
 class DoubleDQN(DQN):
     # override stable-baselines3/dqn/dqn.py train function
@@ -106,6 +108,15 @@ class DoubleDQN(DQN):
         self.logger.record("train/loss", np.mean(losses))
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--activation",
+        default="elu",
+        choices=available_activation_names(),
+        help="Activation function used by the policy network.",
+    )
+    args = parser.parse_args()
+
     # brought over from train_baseline py in src/baseline
     # changed to use DoubleDQN instead of DQN
     # changed to save to logs/double_dqn, callbacks and budget identical to baseline
@@ -135,6 +146,7 @@ def main():
         train_env,
         verbose=1,
         tensorboard_log=os.path.join(log_dir, "tensorboard"),
+        policy_kwargs=dict(activation_fn=get_activation_fn(args.activation)),
         **config.dqn_kwargs(),
     )
 
