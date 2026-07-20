@@ -180,10 +180,8 @@ class DuelingQNetwork(BasePolicy):
                 print("\n" + "="*60)
                 print(f"Forward call #{DuelingQNetwork._forward_call_count}")
                 print(f"  Features std: {features.std().item():.4f}")
-                print(f"  Value (V) mean: {value.mean().item():.4f}  std: {
-                      value.std().item():.4f}")
-                print(f"  Advantages (A) mean: {advantages.mean().item():.4f}  std: {
-                      advantages.std().item():.4f}")
+                print(f"  Value (V) mean: {value.mean().item():.4f}  std: {value.std().item():.4f}")
+                print(f"  Advantages (A) mean: {advantages.mean().item():.4f}  std: {advantages.std().item():.4f}")
                 print(f"  Q max-min diff: {q_max_min:.6f}")
                 print(f"  Selected action: {q.argmax(dim=1)[0].item()}")
                 print("="*60 + "\n")
