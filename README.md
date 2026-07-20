@@ -58,6 +58,11 @@ cd src
 | Train Double DQN            | `python -m agents.double_dqn`            | Ekam, Lex     |
 | Train Dueling DQN           | `python -m agents.dueling_dqn`           | Hargun, Evan  |
 
+Each training script accepts `--activation <name>` so you can compare
+nonlinearities without changing model code. Available options are `relu`,
+`elu`, `leaky_relu`, `tanh`, `sigmoid`, `gelu`, `silu`, `swish`, `mish`, and
+`identity`.
+
 Each writes models + logs to `logs/<name>/`. The best model (by eval reward)
 is saved as `best_model.zip` in that folder.
 

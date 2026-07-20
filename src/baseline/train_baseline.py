@@ -10,6 +10,7 @@ Run from the src/ directory:
     python -m baseline.train_baseline
 """
 
+import argparse
 import os
 from datetime import datetime
 
@@ -20,11 +21,21 @@ from stable_baselines3.common.callbacks import (
     CallbackList,
 )
 
+from common.activation_functions import available_activation_names, get_activation_fn
 from common import fast_config as config
 from common.env_factory import make_vec
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--activation",
+        default="elu",
+        choices=available_activation_names(),
+        help="Activation function used by the policy network.",
+    )
+    args = parser.parse_args()
+
     log_dir = os.path.join(config.LOG_ROOT, "baseline_dqn")
     os.makedirs(log_dir, exist_ok=True)
 
@@ -54,6 +65,7 @@ def main():
         train_env,
         verbose=1,
         tensorboard_log=os.path.join(log_dir, "tensorboard"),
+        policy_kwargs=dict(activation_fn=get_activation_fn(args.activation)),
         **config.dqn_kwargs(),
     )
 
