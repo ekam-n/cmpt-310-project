@@ -35,8 +35,10 @@ Notes:
 """
 
 import torch as th
+import numpy as np
 from gymnasium import spaces
 from torch import nn
+rng = np.random.default_rng()
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.torch_layers import (
     BaseFeaturesExtractor,
@@ -44,6 +46,7 @@ from stable_baselines3.common.torch_layers import (
     create_mlp
 )
 from stable_baselines3.common.type_aliases import PyTorchObs
+import torch.nn.functional as F
 
 # NoisyQNetwork is very similar to dueling network (only with noisy not linear layers)
 # credit to Hargun/Evan as most of this class is copied from their DuelingQNetwork
@@ -88,6 +91,7 @@ class NoisyQNetwork(BasePolicy):
     self.shared_net = nn.Sequential(*shared_layers)
     shared_dim = net_arch[-1] if net_arch else self.features_dim
 
+    # change q_net and a_net so they use NoisyLinear layers instead of Linear
     self.q_net = nn.Sequential(
       NoisyLinear(shared_dim, 128),
       activation_fn(),
@@ -110,6 +114,7 @@ class NoisyQNetwork(BasePolicy):
     q = value + (advantages - advantages.mean(dim=1, keepdim=True))
 
     NoisyQNetwork._forward_call_count += 1
+    return q
 
   def predict(self, observation: PyTorchObs, deterministics: bool = True) -> th.Tensor:
     q_values = self(observation)
@@ -129,38 +134,64 @@ class NoisyQNetwork(BasePolicy):
 
   def reset_noise(self):
     # reset noise for each module
-    # pytorch should handle calling noisylinear reset noise
-
-
+    # need to get all modules, check if they are a noisylinear layer, then call reset if it is
+    for module in self.modules():
+      if isinstance(module, NoisyLinear):
+        module.reset_noise() # calls the NoisyLinear reset noise function
 
 class NoisyLinear(nn.Module):
-  def __init__(self):
+  def __init__(self, in_features, out_features):
+    super().__init__()
     # initialize parameters and buffers
+    self.epsilon_weight = th.zeros(out_features, in_features)
+    self.epsilon_bias = th.zeros(out_features)
+    self.in_features = in_features
+    self.out_features = out_features
 
     # learned
-    mu_weight = 0
-    sigma_weight = 0
-    mu_bias = 0
-    sigma_bias = 0
+    # need to ensure the sizes are correct, use nn.Parameter
+    sigma_init = 0.5 / np.sqrt(self.in_features) # from paper
+    mu_bound = 1 / np.sqrt(self.in_features) # from paper
+    self.mu_weight = nn.Parameter(th.empty(out_features, in_features))
+    nn.init.uniform_(self.mu_weight, -mu_bound, mu_bound) # from paper
+    self.sigma_weight = nn.Parameter(th.empty(out_features, in_features))
+    self.sigma_weight.fill_(sigma_init)
+
+    self.mu_bias = nn.Parameter(th.empty(out_features))
+    nn.init.uniform_(self.mu_bias, -mu_bound, mu_bound)
+    self.sigma_bias = nn.Parameter(th.empty(out_features))
+    self.sigma_bias.fill_(sigma_init)
     
-    epsilon_weight = 0
-    epsilon_bias = 0
-    sigma_0 = 0.5
-    in_features = 0
-    out_features = 0
-    
-  def scale_noise(self):
+  def scale_noise(self, epsilon):
     # helper function for reset_noise
     # functions from section 3.2
     # eq 10
 
-  def reset_noise(self):
-    # call scale_noise
-    # set epsilon_weight and epsilon_bias
+    # f(x) = sign(x) * sqrt(abs(x)) from paper
+    return th.sign(epsilon) * th.sqrt(th.abs(epsilon))
 
-  def forward_layer(self):
+
+  def reset_noise(self):
+    # set epsilon_weight and epsilon_bias
+    # epsilon_weight = epsilon_j * epsilon_i ^T
+    # epsilon_bias = epsilon_j
+    epsilon_i = th.randn(self.in_features)
+    epsilon_j = th.randn(self.out_features)
+    epsilon_i = self.scale_noise(epsilon_i)
+    epsilon_j = self.scale_noise(epsilon_j)
+
+    self.epsilon_weight = th.outer(epsilon_j, epsilon_i) # from paper
+    self.epsilon_bias = epsilon_j # from paper
+
+
+  def forward(self, input):
     # use eqs 8 and 9
     # take values set in reset_noise and from init
+    weight = self.mu_weight + self.sigma_weight * self.epsilon_weight # from paper
+    bias = self.mu_bias + self.sigma_bias * self.epsilon_bias # from paper
+
+    return F.linear(input, weight, bias)
+
 
 class NoisyDoubleDuelingDQN(DQN):
   # combine noisy, double, and dueling? noisy needs to be put on top of this architecture
