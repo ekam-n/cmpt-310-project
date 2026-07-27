@@ -22,7 +22,7 @@ from stable_baselines3.common.callbacks import (
 )
 
 from common.activation_functions import available_activation_names, get_activation_fn
-from common import fast_config as config
+from common import config as config
 from common.env_factory import make_vec
 
 
