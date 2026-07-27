@@ -63,8 +63,28 @@ nonlinearities without changing model code. Available options are `relu`,
 `elu`, `leaky_relu`, `tanh`, `sigmoid`, `gelu`, `silu`, `swish`, `mish`, and
 `identity`.
 
-Each writes models + logs to `logs/<name>/`. The best model (by eval reward)
-is saved as `best_model.zip` in that folder.
+**`--reward-wrapper {on,off}` is required** — it has no default, because the
+three scripts used to hardcode different values and any default would silently
+change somebody's results:
+
+```bash
+python -m baseline.train_baseline --activation relu --reward-wrapper off
+```
+
+Each run writes to its own directory, `logs/<agent>/<settings>_<timestamp>/`,
+along with a `run_config.json` recording exactly what produced it (including the
+git commit). Runs no longer overwrite each other. The best model (by eval
+reward) is `best_model.zip` inside that run directory.
+
+**See [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md)** for launching runs, comparing
+them (`--filter` / `--group-by`), the fixed evaluation seeds, running sweeps, and
+the test suite.
+
+### Before you merge
+
+```bash
+pytest src/tests/ -v        # ~10 seconds
+```
 
 ### Watch training progress
 
@@ -83,18 +103,28 @@ was why it appeared broken.) Then open http://localhost:6006.
 `evaluate/plots.py` turns training logs into the figures we need. From `src/`:
 
 ```bash
-# learning curves for every trained agent, overlaid (fast):
+# learning curves for every run, overlaid (fast):
 python -m evaluate.plots
 
+# slice the runs: one agent, one curve per activation:
+python -m evaluate.plots --filter agent=baseline_dqn --group-by activation
+
+# list every run and its settings:
+python -m evaluate.plots --list
+python -m evaluate.plots --index      # -> figures/runs_index.csv
+
 # + final comparison table and per-metric bar charts (slow — rolls out episodes):
-python -m evaluate.plots --full --episodes 20
+python -m evaluate.plots --full
 ```
 
 Outputs land in `src/figures/`: `learning_curves.png`, `comparison.csv`,
-`comparison.md`, and one bar chart per metric. It auto-discovers every agent
-under `src/logs/` — no configuration needed. For the canonical writeup
-figures, ONE machine should train all agents under the shared config and
-generate the figures in one place.
+`comparison.md`, `runs_index.csv`, and one bar chart per metric. It auto-discovers
+every run under `src/logs/` — including older flat `logs/<agent>/` runs from
+before per-run directories existed. Runs that differ only by seed are averaged
+into one curve with a std band. The `--full` table evaluates every model on the
+same 20 fixed tracks (`config.EVAL_SEEDS`) so the comparison isn't confounded by
+track luck. For the canonical writeup figures, ONE machine should train all
+agents under the shared config and generate the figures in one place.
 
 ---
 

@@ -1,0 +1,11 @@
+{
+  "_comment": "Tiny 2-run sweep used to sanity-check the sweep machinery itself (and the verification steps in docs/EXPERIMENTS.md). Trains almost nothing -- it exists to prove runs launch, land in separate directories, and get skipped on a re-run.",
+  "agents": ["baseline_dqn"],
+  "activation": ["relu", "tanh"],
+  "reward_wrapper": ["off"],
+  "seed": [42],
+  "timesteps": 300,
+  "eval_freq": 150,
+  "n_eval_episodes": 1,
+  "note": "smoke sweep"
+}

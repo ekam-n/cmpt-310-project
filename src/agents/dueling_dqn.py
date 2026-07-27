@@ -30,6 +30,7 @@ from stable_baselines3.common.callbacks import (
 )
 
 from common import config as config
+from common import run_tracking
 from common.env_factory import make_vec
 from typing import Any
 import torch as th
@@ -255,25 +256,31 @@ def main():
         choices=available_activation_names(),
         help="Activation function used by the policy network.",
     )
+    run_tracking.add_common_args(parser)
     args = parser.parse_args()
 
-    log_dir = os.path.join(config.LOG_ROOT, "dueling_dqn")
-    os.makedirs(log_dir, exist_ok=True)
+    # Each run gets its own logs/dueling_dqn/<tags>_<stamp>/ dir + manifest, so
+    # two runs with different settings no longer overwrite each other.
+    ctx = run_tracking.start_run("dueling_dqn", args, "DuelingDQNPolicy")
+    log_dir = str(ctx.run_dir)
 
-    eval_env = make_vec(use_reward_wrapper=True)
-    train_env = make_vec(use_reward_wrapper=True)
+    # Reward shaping is now an explicit, recorded per-run choice (--reward-wrapper),
+    # not a hardcoded value. This script historically used the wrapper (on).
+    use_reward_wrapper = args.reward_wrapper == "on"
+    eval_env = make_vec(seed=args.seed, use_reward_wrapper=use_reward_wrapper)
+    train_env = make_vec(seed=args.seed, use_reward_wrapper=use_reward_wrapper)
 
     eval_cb = EvalCallback(
         eval_env,
         best_model_save_path=log_dir,
         log_path=log_dir,
-        eval_freq=config.EVAL_FREQ,
-        n_eval_episodes=config.N_EVAL_EPISODES,
+        eval_freq=args.eval_freq,
+        n_eval_episodes=args.n_eval_episodes,
         deterministic=True,
         render=False,
     )
     ckpt_cb = CheckpointCallback(
-        save_freq=config.EVAL_FREQ,
+        save_freq=args.eval_freq,
         save_path=os.path.join(log_dir, "checkpoints"),
     )
    # DQN has an array of policy, cant begin trainint without adding the child to said array
@@ -285,11 +292,11 @@ def main():
         verbose=1,
         tensorboard_log=os.path.join(log_dir, "tensorboard"),
         policy_kwargs=dict(activation_fn=get_activation_fn(args.activation)),
-        **config.dqn_kwargs(),
+        **{**config.dqn_kwargs(), "seed": args.seed},
     )
 
     model.learn(
-        total_timesteps=config.TOTAL_TIMESTEPS,
+        total_timesteps=args.timesteps,
         progress_bar=True,
         callback=CallbackList([ckpt_cb, eval_cb]),
     )
@@ -298,6 +305,9 @@ def main():
     model.save(os.path.join(log_dir, f"final_model_{stamp}"))
     print(f"\nSaved baseline model to {log_dir}")
     print("Best model (by eval reward) is at best_model.zip in the same dir.")
+
+    # Writes results.json: best eval reward + its timestep + wall-clock seconds.
+    run_tracking.finish_run(ctx)
 
     train_env.close()
     eval_env.close()

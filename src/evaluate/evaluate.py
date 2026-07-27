@@ -26,7 +26,11 @@ HOW TERMINATION IS CLASSIFIED (verified against the CarRacing-v3 source):
   raw -100 death signal is intact). Evaluate every agent on the same
   unshaped env via make_vec(use_reward_wrapper=False) for fair, comparable
   numbers. (Shaped reward is for *training*; evaluation should use the env's
-  native reward.)
+  native reward.) common.env_factory.make_eval_vec() builds exactly that env.
+
+  FIXED TRACKS: pass seeds=config.EVAL_SEEDS so every model is scored on the
+  same 20 tracks -- otherwise each model gets freshly randomised tracks and
+  part of the difference between agents is just track luck.
 """
 
 import json
@@ -35,20 +39,39 @@ import numpy as np
 DEATH_REWARD_THRESHOLD = -90.0   # env emits -100 on leaving the playfield
 
 
-def evaluate_agent(model, env, n_episodes=20):
+def evaluate_agent(model, env, n_episodes=20, seeds=None):
     """Roll out a trained model and return a metrics dict.
 
-    `env` should be a vectorized env from common.env_factory.make_vec with
-    n_envs=1 and use_reward_wrapper=False. `model` is any SB3 model with
+    `env` should be a vectorized env from common.env_factory.make_eval_vec()
+    (n_envs=1, use_reward_wrapper=False). `model` is any SB3 model with
     .predict().
+
+    `seeds`: pass config.EVAL_SEEDS to evaluate on a FIXED set of tracks.
+    CarRacing generates a new random track on every reset, so without this two
+    agents are scored on different tracks and the comparison is partly track
+    luck. With it, episode i always runs on seeds[i] for every model. If there
+    are more episodes than seeds the list wraps around.
+
+    Leaving `seeds=None` keeps the original random-track behaviour.
     """
+    if seeds:
+        # Fixed tracks are the point of the comparison table; say so out loud
+        # if the caller asks for fewer episodes than seeds and silently drops some.
+        if n_episodes < len(seeds):
+            print(f"  (note: {n_episodes} episodes < {len(seeds)} eval seeds -- "
+                  f"only the first {n_episodes} tracks will be used)")
+
     rewards = []
     lengths = []
     completed = []          # 1 if lap completed
     collided = []           # 1 if died off playfield
     first_lap_steps = []    # episode length for completed episodes
 
-    for _ in range(n_episodes):
+    for ep in range(n_episodes):
+        if seeds:
+            # Seed BEFORE reset: SB3's DummyVecEnv passes the stored seed into
+            # the next env.reset(), which is what regenerates the same track.
+            env.seed(seeds[ep % len(seeds)])
         obs = env.reset()
         done = False
         last_reward = 0.0
@@ -92,6 +115,9 @@ def evaluate_agent(model, env, n_episodes=20):
             float(np.mean(first_lap_steps)) if first_lap_steps else None
         ),
         "n_episodes": n_episodes,
+        # Recorded so a results.json makes clear whether the numbers came from
+        # the fixed track set or from random tracks.
+        "eval_seeds": list(seeds) if seeds else None,
     }
 
 
