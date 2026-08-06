@@ -226,6 +226,7 @@ class NoisyDoubleDuelingDQN(DQN):
   # dueling is used in NoisyQNetwork, do we need to inherit the DuelingDQNPolicy?
   # modify DQN train function in here like DoubleDQN class, train should also reset noise?
   # q_net and q_net_target should use NoisyQNetwork
+  '''
   def __init__(
     self,
     observation_space: spaces.Space,
@@ -253,6 +254,7 @@ class NoisyDoubleDuelingDQN(DQN):
         optimizer_class=optimizer_class,
         optimizer_kwargs=optimizer_kwargs,
     )
+    '''
 
   def make_q_net(self):
     return NoisyQNetwork(
@@ -348,7 +350,7 @@ def main():
         train_env,
         verbose=1,
         tensorboard_log=os.path.join(log_dir, "tensorboard"),
-        **config.dqn_kwargs(),
+        **config.noisy_dqn_kwargs(),
     )
 
     model.learn(
