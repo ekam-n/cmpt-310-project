@@ -50,6 +50,7 @@ AGENT_MODULES = {
     "baseline_dqn": "baseline.train_baseline",
     "double_dqn": "agents.double_dqn",
     "dueling_dqn": "agents.dueling_dqn",
+    "noisy_dqn": "agents.noisy_net",
 }
 
 # Keys that are swept (each becomes a CLI flag on the training command).

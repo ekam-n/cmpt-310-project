@@ -303,7 +303,7 @@ def main():
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M")
     model.save(os.path.join(log_dir, f"final_model_{stamp}"))
-    print(f"\nSaved baseline model to {log_dir}")
+    print(f"\nSaved dueling model to {log_dir}")
     print("Best model (by eval reward) is at best_model.zip in the same dir.")
 
     # Writes results.json: best eval reward + its timestep + wall-clock seconds.

@@ -43,6 +43,7 @@ MODULES = [
     "baseline.train_baseline",
     "agents.double_dqn",
     "agents.dueling_dqn",
+    "agents.noisy_net",
     "experiments.sweep",
 ]
 
@@ -164,11 +165,16 @@ def _build_agent(agent, env):
         from agents.dueling_dqn import DuelingDQNPolicy
         DQN.policy_aliases["DuelingDQNPolicy"] = DuelingDQNPolicy
         return DQN("DuelingDQNPolicy", env, **TINY)
+    if agent == "noisy_dqn":
+        from agents.noisy_net import NoisyDoubleDuelingDQN, NoisyQNetwork
+        DQN.policy_aliases["NoisyDQNPolicy"] = NoisyQNetwork
+        return NoisyDoubleDuelingDQN("NoisyDQNPolicy", env, **TINY)
     raise AssertionError(agent)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("agent", ["baseline_dqn", "double_dqn", "dueling_dqn"])
+@pytest.mark.parametrize("agent", ["baseline_dqn", "double_dqn", "dueling_dqn",
+                                   "noisy_dqn"])
 def test_agent_trains_a_few_steps(agent, vec_env):
     """~200 steps end to end: builds, collects, does gradient updates, predicts.
 
@@ -689,7 +695,8 @@ def test_sweep_command_includes_required_flags():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("module_name", [
-    "baseline.train_baseline", "agents.double_dqn", "agents.dueling_dqn"])
+    "baseline.train_baseline", "agents.double_dqn", "agents.dueling_dqn",
+    "agents.noisy_net"])
 def test_reward_wrapper_flag_is_required(module_name):
     """--reward-wrapper has no default on purpose: the three scripts used to
     hardcode different values, so any default would silently change results."""
