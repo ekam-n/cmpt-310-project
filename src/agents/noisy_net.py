@@ -132,7 +132,7 @@ class NoisyQNetwork(BasePolicy):
     NoisyQNetwork._forward_call_count += 1
     return q
 
-  def predict(self, observation: PyTorchObs, deterministic: bool = True) -> th.Tensor:
+  def _predict(self, observation: PyTorchObs, deterministic: bool = True) -> th.Tensor:
     q_values = self(observation)
 
     if deterministic:
