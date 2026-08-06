@@ -82,3 +82,12 @@ def dqn_kwargs():
         seed=SEED,
         # features_dims=FEATURES_DIMS,
     )
+
+def noisy_dqn_kwargs():
+    kwargs - dqn_kwargs()
+
+    kwargs["exploration_fraction"] = 0.0
+    kwargs["exploration_initial_eps"] = 0.0
+    kwargs["exploration_final_eps"] = 0.0
+
+    return kwargs

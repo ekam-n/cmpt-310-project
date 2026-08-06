@@ -17,3 +17,4 @@ tensorboard>=2.14
 tqdm>=4.66
 rich>=13.0          # nicer progress_bar=True output
 opencv-python>=4.8  # required by WarpFrame (grayscale/resize)
+pytest>=8.0         # smoke tests (src/tests/)

@@ -166,8 +166,8 @@ def _build_agent(agent, env):
         DQN.policy_aliases["DuelingDQNPolicy"] = DuelingDQNPolicy
         return DQN("DuelingDQNPolicy", env, **TINY)
     if agent == "noisy_dqn":
-        from agents.noisy_net import NoisyDoubleDuelingDQN, NoisyQNetwork
-        DQN.policy_aliases["NoisyDQNPolicy"] = NoisyQNetwork
+        from agents.noisy_net import NoisyDoubleDuelingDQN, NoisyDQNPolicy
+        DQN.policy_aliases["NoisyDQNPolicy"] = NoisyDQNPolicy
         return NoisyDoubleDuelingDQN("NoisyDQNPolicy", env, **TINY)
     raise AssertionError(agent)
 
