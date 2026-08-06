@@ -336,7 +336,13 @@ def main():
 
     # Each run gets its own logs/noisy_dqn/<tags>_<stamp>/ dir + manifest, so
     # two runs with different settings no longer overwrite each other.
-    ctx = run_tracking.start_run("noisy_dqn", args, "NoisyDoubleDuelingDQN")
+    # The manifest's dqn_kwargs field always holds the shared base values, so
+    # the epsilon-free kwargs this agent actually trains with are recorded
+    # under their own key.
+    ctx = run_tracking.start_run(
+        "noisy_dqn", args, "NoisyDoubleDuelingDQN",
+        extra_config=dict(noisy_dqn_kwargs=config.noisy_dqn_kwargs()),
+    )
     log_dir = str(ctx.run_dir)
 
     # Reward shaping is now an explicit, recorded per-run choice (--reward-wrapper),
@@ -367,7 +373,7 @@ def main():
         verbose=1,
         tensorboard_log=os.path.join(log_dir, "tensorboard"),
         policy_kwargs=dict(activation_fn=get_activation_fn(args.activation)),
-        **{**config.dqn_kwargs(), "seed": args.seed},
+        **{**config.noisy_dqn_kwargs(), "seed": args.seed},
     )
 
     model.learn(

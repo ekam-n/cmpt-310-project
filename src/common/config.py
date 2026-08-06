@@ -84,7 +84,7 @@ def dqn_kwargs():
     )
 
 def noisy_dqn_kwargs():
-    kwargs - dqn_kwargs()
+    kwargs = dqn_kwargs()
 
     kwargs["exploration_fraction"] = 0.0
     kwargs["exploration_initial_eps"] = 0.0
