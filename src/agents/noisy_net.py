@@ -36,6 +36,7 @@ Notes:
 
 # imports for NoisyQNetwork and NoisyLinear
 import torch as th
+import copy
 import numpy as np
 from stable_baselines3 import DQN
 from gymnasium import spaces
@@ -63,6 +64,7 @@ from stable_baselines3.common.callbacks import (
    CallbackList
 )
 from common.activation_functions import available_activation_names, get_activation_fn
+from stable_baselines3.dqn.policies import DQNPolicy
 
 # NoisyQNetwork is very similar to dueling network (only with noisy not linear layers)
 # credit to Hargun/Evan as most of this class is copied from their DuelingQNetwork
@@ -131,12 +133,11 @@ class NoisyQNetwork(BasePolicy):
 
     NoisyQNetwork._forward_call_count += 1
     return q
-
+  
   def _predict(self, observation: PyTorchObs, deterministic: bool = True) -> th.Tensor:
-    q_values = self(observation)
-
     if deterministic:
       self.reset_noise()
+    q_values = self(observation)
     return q_values.argmax(dim=1).reshape(-1)
 
   def _get_constructor_parameters(self) -> dict[str, Any]:
@@ -256,16 +257,6 @@ class NoisyDoubleDuelingDQN(DQN):
     )
     '''
 
-  def make_q_net(self):
-    return NoisyQNetwork(
-        observation_space=self.observation_space,
-        action_space=self.action_space,
-        features_dim=512,
-        net_arch=self.net_arch,
-        activation_fn=self.activation_fn,
-        normalize_images=self.normalize_images,
-    )
-
   def train(self, gradient_steps: int, batch_size: int = 100) -> None:
     # Switch to train mode (this affects batch norm / dropout)
     self.policy.set_training_mode(True)
@@ -281,11 +272,11 @@ class NoisyDoubleDuelingDQN(DQN):
 
       # here is the double DQN additions
       with th.no_grad():
-          next_online_q_values = self.q_net(replay_data.next_observations)
+          next_online_q_values = self.policy.q_net(replay_data.next_observations)
           next_action = next_online_q_values.argmax(dim=1, keepdim=True)
 
           # evaluate Q value of action with target network
-          new_target_q_value = self.q_net_target(replay_data.next_observations)
+          new_target_q_value = self.policy.q_net_target(replay_data.next_observations)
           next_q_values = new_target_q_value.gather(1, next_action) # replaces need for reshape as in DQN
           
           # keep these lines from stablebaseline3's implementation
@@ -293,7 +284,7 @@ class NoisyDoubleDuelingDQN(DQN):
           target_q_values = replay_data.rewards + (1 - replay_data.dones) * discounts * next_q_values
 
       # Get current Q-values estimates
-      current_q_values = self.q_net(replay_data.observations)
+      current_q_values = self.policy.q_net(replay_data.observations)
 
       # Retrieve the q-values for the actions from the replay buffer
       current_q_values = th.gather(current_q_values, dim=1, index=replay_data.actions.long())
@@ -309,14 +300,26 @@ class NoisyDoubleDuelingDQN(DQN):
       th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
       self.policy.optimizer.step()
       # paper recommends to reset noise after optimizer
-      self.q_net.reset_noise()
-      self.q_net_target.reset_noise()
+      self.policy.q_net.reset_noise()
+      self.policy.q_net_target.reset_noise()
 
     # Increase update counter
     self._n_updates += gradient_steps
 
     self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
     self.logger.record("train/loss", np.mean(losses))
+
+class NoisyDQNPolicy(DQNPolicy):
+  def make_q_net(self):
+    return NoisyQNetwork(
+      observation_space=self.observation_space,
+      action_space=self.action_space,
+      features_dim=512,
+      net_arch=self.net_arch,
+      activation_fn=self.activation_fn,
+      normalize_images=self.normalize_images,
+    )
+    
 
 # credit to hargun/evan, this main function is from dueling and edited slightly
 def main():
@@ -330,33 +333,33 @@ def main():
     train_env = make_vec(use_reward_wrapper=True)
 
     eval_cb = EvalCallback(
-        eval_env,
-        best_model_save_path=log_dir,
-        log_path=log_dir,
-        eval_freq=config.EVAL_FREQ,
-        n_eval_episodes=config.N_EVAL_EPISODES,
-        deterministic=True,
-        render=False,
+      eval_env,
+      best_model_save_path=log_dir,
+      log_path=log_dir,
+      eval_freq=config.EVAL_FREQ,
+      n_eval_episodes=config.N_EVAL_EPISODES,
+      deterministic=True,
+      render=False,
     )
     ckpt_cb = CheckpointCallback(
-        save_freq=config.EVAL_FREQ,
-        save_path=os.path.join(log_dir, "checkpoints"),
+      save_freq=config.EVAL_FREQ,
+      save_path=os.path.join(log_dir, "checkpoints"),
     )
    # DQN has an array of policy, cant begin trainint without adding the child to said array
-    DQN.policy_aliases["NoisyDQNPolicy"] = NoisyQNetwork # network replacement
+    DQN.policy_aliases["NoisyDQNPolicy"] = NoisyDQNPolicy # network replacement
 
     model = NoisyDoubleDuelingDQN( # model replacement
-        "NoisyDQNPolicy",
-        train_env,
-        verbose=1,
-        tensorboard_log=os.path.join(log_dir, "tensorboard"),
-        **config.noisy_dqn_kwargs(),
+      "NoisyDQNPolicy",
+      train_env,
+      verbose=1,
+      tensorboard_log=os.path.join(log_dir, "tensorboard"),
+      **config.noisy_dqn_kwargs(),
     )
 
     model.learn(
-        total_timesteps=config.TOTAL_TIMESTEPS,
-        progress_bar=True,
-        callback=CallbackList([ckpt_cb, eval_cb]),
+      total_timesteps=config.TOTAL_TIMESTEPS,
+      progress_bar=True,
+      callback=CallbackList([ckpt_cb, eval_cb]),
     )
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M")
