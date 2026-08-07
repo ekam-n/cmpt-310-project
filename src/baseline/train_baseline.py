@@ -27,6 +27,9 @@ from agents import DoubleDQN
 from agents import DuelingDQNPolicy
 from agents import NoisyDoubleDuelingDQN
 from agents import NoisyDQNPolicy
+from common import available_activation_names, get_activation_fn
+
+import argparse
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
