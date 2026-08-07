@@ -7,13 +7,14 @@ across the baseline and every contribution. If you change preprocessing,
 change it HERE so the comparison stays fair.
 """
 
-import gymnasium
+import gymnasium as gym
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack, VecTransposeImage
 from stable_baselines3.common.atari_wrappers import WarpFrame
 
 from common import config
 from envs.reward_wrapper import CarRacingRewardWrapper
+from common import CustomCarRacing
 
 
 def make_env(render_mode=None, use_reward_wrapper=True):
@@ -21,12 +22,20 @@ def make_env(render_mode=None, use_reward_wrapper=True):
 
     Used as the callable passed into SB3's make_vec_env.
     """
-    env = gymnasium.make(
-        config.ENV_ID,
+    
+    
+    env = CustomCarRacing(
         continuous=config.CONTINUOUS,
         lap_complete_percent=config.LAP_COMPLETE_PERCENT,
         render_mode=render_mode,
+        car_color=(1.0, 0, 0),
     )
+
+    env = gym.wrappers.TimeLimit(
+        env,
+        max_episode_steps=2000
+    )
+
     if use_reward_wrapper:
         env = CarRacingRewardWrapper(env)
     if config.GRAYSCALE:

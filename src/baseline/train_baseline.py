@@ -23,9 +23,34 @@ from stable_baselines3.common.callbacks import (
 from common import config
 from common.env_factory import make_vec
 
+from agents import DoubleDQN
+from agents import DuelingDQNPolicy
+from agents import NoisyDoubleDuelingDQN
+from agents import NoisyDQNPolicy
 
 def main():
-    log_dir = os.path.join(config.LOG_ROOT, "baseline_dqn")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+    "--algorithm",
+    default="baseline",
+    choices=["baseline", "double", "dueling", "noisy"],
+    help="Which DQN variant to train.",
+    )
+    parser.add_argument(
+        "--activation",
+        default="elu",
+        choices=available_activation_names(),
+        help="Activation function used by the policy network.",
+    )
+    args = parser.parse_args()
+
+    algorithm_dirs = {
+    "baseline": "baseline_dqn_1-000",
+    "double": "double_dqn_1-000",
+    "dueling": "dueling_dqn_1-000",
+    "noisy": "noisy_dd_dqn_1-000",}
+
+    log_dir = os.path.join(config.LOG_ROOT, algorithm_dirs[args.algorithm])
     os.makedirs(log_dir, exist_ok=True)
 
     # Use default reward (no shaping) for the baseline so contributions that
@@ -48,13 +73,43 @@ def main():
         save_path=os.path.join(log_dir, "checkpoints"),
     )
 
-    model = DQN(
-        "CnnPolicy",
-        train_env,
-        verbose=1,
-        tensorboard_log=os.path.join(log_dir, "tensorboard"),
-        **config.dqn_kwargs(),
+    common_kwargs = dict(
+    verbose=1,
+    tensorboard_log=os.path.join(log_dir, "tensorboard"),
+    policy_kwargs=dict(
+        activation_fn=get_activation_fn(args.activation)
+    ),
+    **config.dqn_kwargs(),
     )
+
+    if args.algorithm == "baseline":
+        model = DQN(
+            "CnnPolicy",
+            train_env,
+            **common_kwargs,
+            )
+    elif args.algorithm == "double":
+        model = DoubleDQN(
+            "CnnPolicy",
+            train_env,
+            **common_kwargs,
+        )
+    elif args.algorithm == "dueling":
+        DQN.policy_aliases["DuelingDQNPolicy"] = DuelingDQNPolicy
+
+        model = DQN(
+            "DuelingDQNPolicy",
+            train_env,
+            **common_kwargs,
+
+        )
+    elif args.algorithm == "noisy":
+        DQN.policy_aliases["NoisyDQNPolicy"] = NoisyDQNPolicy
+        model = NoisyDoubleDuelingDQN(
+            "NoisyDQNPolicy",
+            train_env,
+            **common_kwargs,
+        )
 
     model.learn(
         total_timesteps=config.TOTAL_TIMESTEPS,

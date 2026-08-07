@@ -19,19 +19,20 @@ N_STACK = 4                 # frame stacking for motion information
 N_ENVS = 1                  # parallel envs (keep at 1 for reproducibility/simplicity)
 
 # --- Training budget (keep identical across all agents for fair comparison) ---
-TOTAL_TIMESTEPS = 500_000
+TOTAL_TIMESTEPS = 1_000_000
 SEED = 42
 
 # --- DQN hyperparameters (SB3 defaults shown explicitly so everyone sees them) ---
 LEARNING_RATE = 1e-4
-BUFFER_SIZE = 100_000
-LEARNING_STARTS = 10_000     # steps of random play before learning begins
+BUFFER_SIZE = 50_000
+LEARNING_STARTS = 20_000     # steps of random play before learning begins
 BATCH_SIZE = 32
-TAU = 1.0                    # 1.0 = hard target update; <1.0 = Polyak (Ekam's research thread)
+# 1.0 = hard target update; <1.0 = Polyak (Ekam's research thread)
+TAU = 1.0
 GAMMA = 0.99                 # discount factor
 TRAIN_FREQ = 4              # gradient update every N steps
 GRADIENT_STEPS = 1
-TARGET_UPDATE_INTERVAL = 1_000   # copy online -> target every N steps
+TARGET_UPDATE_INTERVAL = 1_000  # copy online -> target every N steps
 EXPLORATION_FRACTION = 0.2       # fraction of training over which epsilon decays
 EXPLORATION_INITIAL_EPS = 1.0
 EXPLORATION_FINAL_EPS = 0.05

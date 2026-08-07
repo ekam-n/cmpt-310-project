@@ -30,7 +30,8 @@ comparison (see common.config and common.env_factory).
 RUNNING:
 Run from src/: python -m agents.double_dqn
 """
-
+'''
+import argparse
 from stable_baselines3 import DQN
 import torch as th
 import torch.nn.functional as F
@@ -45,6 +46,13 @@ from stable_baselines3.common.callbacks import (
    CheckpointCallback,
    CallbackList
 )
+
+from common.activation_functions import available_activation_names, get_activation_fn
+'''
+from stable_baselines3 import DQN
+import torch as th
+import torch.nn.functional as F
+import numpy as np
 
 class DoubleDQN(DQN):
     # override stable-baselines3/dqn/dqn.py train function
@@ -105,6 +113,7 @@ class DoubleDQN(DQN):
         self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
         self.logger.record("train/loss", np.mean(losses))
 
+'''
 def main():
     # brought over from train_baseline py in src/baseline
     # changed to use DoubleDQN instead of DQN
@@ -155,3 +164,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    '''
