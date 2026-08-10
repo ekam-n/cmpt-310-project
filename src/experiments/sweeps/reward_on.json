@@ -1,0 +1,11 @@
+{
+  "_comment": "Reward-shaping ablation: every agent trained WITH the shaping wrapper (speed/on-track/movement/progress terms; the broken smoothness term was removed). Compare against the reward-wrapper-off runs of the same agents/activation/seed to isolate what shaping contributes. Evaluation is always unshaped, so eval rewards are directly comparable across both arms.",
+  "agents": ["baseline_dqn", "double_dqn", "dueling_dqn", "noisy_dqn"],
+  "activation": ["relu"],
+  "reward_wrapper": ["on"],
+  "seed": [1],
+  "timesteps": 750000,
+  "eval_freq": 25000,
+  "n_eval_episodes": 20,
+  "note": "reward shaping ablation (wrapper on)"
+}
