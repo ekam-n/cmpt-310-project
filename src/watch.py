@@ -8,6 +8,7 @@ Needs the project venv (stable_baselines3 is not in the system Python):
     ..\\.venv\\Scripts\\python.exe watch.py <run_dir>
 """
 import argparse
+import random
 import sys
 from pathlib import Path
 
@@ -63,19 +64,26 @@ def main():
     model_path = resolve_model_path(Path(args.run_dir))
     print(f"[watch] model: {model_path}", flush=True)
 
-    # make_vec falls back to config.SEED when seed is None, so the track is
-    # NEVER random -- say which seed actually applies. The seed fixes episode
-    # 1's track exactly; episodes 2+ follow a deterministic sequence from it,
-    # so two invocations with the same seed always see the same tracks.
-    seed = args.seed if args.seed is not None else config.SEED
-    if args.seed is None:
-        print(f"[watch] no --seed given -> config default {config.SEED}", flush=True)
-    print(f"[watch] track seed {seed}: same seed = same track sequence, "
-          f"so agents can be compared on identical tracks", flush=True)
+    # Track seeding happens per episode AFTER DQN.load below: load re-seeds
+    # the env with the model's saved TRAINING seed (SB3 set_random_seed), so
+    # seeding earlier would be silently overwritten -- the first episode used
+    # to run the training-seed track no matter what --seed said. Same pattern
+    # as evaluate.py / speed_check.py. SystemRandom because load also reseeds
+    # the random/np.random modules, so a plain draw would be deterministic.
+    if args.seed is not None:
+        track_seed = args.seed
+        print(f"[watch] track seed {track_seed}: episode N runs the "
+              f"{track_seed}+(N-1) track, same as speed_check/evaluate, "
+              f"so agents can be compared on identical tracks", flush=True)
+    else:
+        track_seed = random.SystemRandom().randrange(2 ** 31)
+        print(f"[watch] no --seed given -> random tracks "
+              f"(this run drew {track_seed}; pass --seed {track_seed} "
+              f"to replay them)", flush=True)
 
     render_mode = "rgb_array" if args.headless else "human"
     env = env_factory.make_vec(render_mode=render_mode,
-                               use_reward_wrapper=False, seed=seed)
+                               use_reward_wrapper=False, seed=track_seed)
     model = DQN.load(model_path, env=env)
     print(f"[watch] model loaded (device: {model.device})", flush=True)
     if not args.headless:
@@ -84,8 +92,11 @@ def main():
               flush=True)
 
     for ep in range(args.episodes):
+        env.seed(track_seed + ep)        # must come after load -- see above
         obs = env.reset()
-        print(f"[watch] episode {ep + 1} starting", flush=True)
+        n_tiles = len(env.venv.venv.envs[0].unwrapped.track)
+        print(f"[watch] episode {ep + 1} starting "
+              f"(seed {track_seed + ep}, track: {n_tiles} tiles)", flush=True)
         done = [False]
         total = 0.0
         steps = 0
