@@ -57,6 +57,7 @@ cd src
 | Train baseline DQN          | `python -m baseline.train_baseline`      | shared ref    |
 | Train Double DQN            | `python -m agents.double_dqn`            | Ekam, Lex     |
 | Train Dueling DQN           | `python -m agents.dueling_dqn`           | Hargun, Evan  |
+| Train Noisy Network         | `python -m agents.noisy_net`             | Lex           |
 
 Each training script accepts `--activation <name>` so you can compare
 nonlinearities without changing model code. Available options are `relu`,
@@ -107,8 +108,11 @@ cmpt310-racecar/
 ├── .gitignore
 └── src/
     ├── common/
-    │   ├── config.py          # SHARED hyperparameters — single source of truth
-    │   └── env_factory.py     # SHARED env construction (grayscale, frame stack)
+    │   ├── config.py           # SHARED hyperparameters — single source of truth
+    │   └── env_factory.py      # SHARED env construction (grayscale, frame stack)
+    │   └── activation_functions.py
+    │   └── fast_config.py
+    │   └── visualize.py
     ├── envs/
     │   └── reward_wrapper.py   # SHARED reward shaping (off by default)
     ├── baseline/
@@ -116,9 +120,11 @@ cmpt310-racecar/
     ├── agents/
     │   ├── double_dqn.py       # Ekam + Lex (stub — to implement)
     │   ├── dueling_dqn.py      # Hargun + Evan (stub — to implement)
+    │   ├── noisy_net.py        # Lex (stub — to implement)
     │   └── README.md           # ownership + conventions
     ├── evaluate/
     │   └── evaluate.py         # SHARED metrics: reward, completion, collisions...
+    │   └── plots.py
     └── notebooks/              # scratch / exploration
 ```
 
@@ -147,3 +153,51 @@ apples-to-apples.
 - Don't commit `logs/` (already gitignored — models are big).
 - Touch shared files (`config.py`, `env_factory.py`) only with a heads-up to
   the group, since everyone depends on them.
+
+## License
+### Stable-Baselines3
+MIT License
+
+Copyright (c) 2020 Stable-Baselines Team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+### Gymnasium
+The MIT License
+
+Copyright (c) 2016 OpenAI
+Copyright (c) 2022 Farama Foundation
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
