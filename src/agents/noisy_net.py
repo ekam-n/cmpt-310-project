@@ -64,6 +64,7 @@ from stable_baselines3.common.callbacks import (
    CallbackList
 )
 from common.activation_functions import available_activation_names, get_activation_fn
+from common import run_tracking
 from stable_baselines3.dqn.policies import DQNPolicy
 
 # NoisyQNetwork is very similar to dueling network (only with noisy not linear layers)
@@ -324,48 +325,70 @@ class NoisyDQNPolicy(DQNPolicy):
 # credit to hargun/evan, this main function is from dueling and edited slightly
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--activation",
+        default="elu",
+        choices=available_activation_names(),
+        help="Activation function used by the policy network.",
+    )
+    run_tracking.add_common_args(parser)
     args = parser.parse_args()
 
-    log_dir = os.path.join(config.LOG_ROOT, "NoisyDD_dqn")
-    os.makedirs(log_dir, exist_ok=True)
+    # Each run gets its own logs/noisy_dqn/<tags>_<stamp>/ dir + manifest, so
+    # two runs with different settings no longer overwrite each other.
+    # The manifest's dqn_kwargs field always holds the shared base values, so
+    # the epsilon-free kwargs this agent actually trains with are recorded
+    # under their own key.
+    ctx = run_tracking.start_run(
+        "noisy_dqn", args, "NoisyDoubleDuelingDQN",
+        extra_config=dict(noisy_dqn_kwargs=config.noisy_dqn_kwargs()),
+    )
+    log_dir = str(ctx.run_dir)
 
-    eval_env = make_vec(use_reward_wrapper=True)
-    train_env = make_vec(use_reward_wrapper=True)
+    # Reward shaping is now an explicit, recorded per-run choice (--reward-wrapper),
+    # not a hardcoded value. This script historically used the wrapper (on).
+    use_reward_wrapper = args.reward_wrapper == "on"
+    train_env = make_vec(seed=args.seed, use_reward_wrapper=use_reward_wrapper)
+    eval_env = make_vec(seed=args.seed, use_reward_wrapper=use_reward_wrapper)
 
     eval_cb = EvalCallback(
-      eval_env,
-      best_model_save_path=log_dir,
-      log_path=log_dir,
-      eval_freq=config.EVAL_FREQ,
-      n_eval_episodes=config.N_EVAL_EPISODES,
-      deterministic=True,
-      render=False,
+        eval_env,
+        best_model_save_path=log_dir,
+        log_path=log_dir,
+        eval_freq=args.eval_freq,
+        n_eval_episodes=args.n_eval_episodes,
+        deterministic=True,
+        render=False,
     )
     ckpt_cb = CheckpointCallback(
-      save_freq=config.EVAL_FREQ,
-      save_path=os.path.join(log_dir, "checkpoints"),
+        save_freq=args.eval_freq,
+        save_path=os.path.join(log_dir, "checkpoints"),
     )
    # DQN has an array of policy, cant begin trainint without adding the child to said array
     DQN.policy_aliases["NoisyDQNPolicy"] = NoisyDQNPolicy # network replacement
 
     model = NoisyDoubleDuelingDQN( # model replacement
-      "NoisyDQNPolicy",
-      train_env,
-      verbose=1,
-      tensorboard_log=os.path.join(log_dir, "tensorboard"),
-      **config.noisy_dqn_kwargs(),
+        "NoisyDQNPolicy",
+        train_env,
+        verbose=1,
+        tensorboard_log=os.path.join(log_dir, "tensorboard"),
+        policy_kwargs=dict(activation_fn=get_activation_fn(args.activation)),
+        **{**config.noisy_dqn_kwargs(), "seed": args.seed},
     )
 
     model.learn(
-      total_timesteps=config.TOTAL_TIMESTEPS,
-      progress_bar=True,
-      callback=CallbackList([ckpt_cb, eval_cb]),
+        total_timesteps=args.timesteps,
+        progress_bar=True,
+        callback=CallbackList([ckpt_cb, eval_cb]),
     )
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M")
     model.save(os.path.join(log_dir, f"final_model_{stamp}"))
-    print(f"\nSaved baseline model to {log_dir}")
+    print(f"\nSaved noisy model to {log_dir}")
     print("Best model (by eval reward) is at best_model.zip in the same dir.")
+
+    # Writes results.json: best eval reward + its timestep + wall-clock seconds.
+    run_tracking.finish_run(ctx)
 
     train_env.close()
     eval_env.close()

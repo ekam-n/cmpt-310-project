@@ -47,6 +47,7 @@ from stable_baselines3.common.callbacks import (
 )
 
 from common.activation_functions import available_activation_names, get_activation_fn
+from common import run_tracking
 
 class DoubleDQN(DQN):
     # override stable-baselines3/dqn/dqn.py train function
@@ -115,29 +116,34 @@ def main():
         choices=available_activation_names(),
         help="Activation function used by the policy network.",
     )
+    run_tracking.add_common_args(parser)
     args = parser.parse_args()
 
     # brought over from train_baseline py in src/baseline
     # changed to use DoubleDQN instead of DQN
-    # changed to save to logs/double_dqn, callbacks and budget identical to baseline
-    
-    log_dir = os.path.join(config.LOG_ROOT, "double_dqn")
-    os.makedirs(log_dir, exist_ok=True)
+    # each run now gets its own logs/double_dqn/<tags>_<stamp>/ dir + manifest,
+    # so two runs with different settings no longer overwrite each other
 
-    train_env = make_vec(use_reward_wrapper=False)
-    eval_env = make_vec(use_reward_wrapper=False)
+    ctx = run_tracking.start_run("double_dqn", args, "DoubleDQN")
+    log_dir = str(ctx.run_dir)
+
+    # Reward shaping is now an explicit, recorded per-run choice (--reward-wrapper),
+    # not a hardcoded value. This script historically ran without the wrapper (off).
+    use_reward_wrapper = args.reward_wrapper == "on"
+    train_env = make_vec(seed=args.seed, use_reward_wrapper=use_reward_wrapper)
+    eval_env = make_vec(seed=args.seed, use_reward_wrapper=use_reward_wrapper)
 
     eval_cb = EvalCallback(
         eval_env,
         best_model_save_path=log_dir,
         log_path=log_dir,
-        eval_freq=config.EVAL_FREQ,
-        n_eval_episodes=config.N_EVAL_EPISODES,
+        eval_freq=args.eval_freq,
+        n_eval_episodes=args.n_eval_episodes,
         deterministic=True,
         render=False,
     )
     ckpt_cb = CheckpointCallback(
-        save_freq=config.EVAL_FREQ,
+        save_freq=args.eval_freq,
         save_path=os.path.join(log_dir, "checkpoints"),
     )
 
@@ -147,11 +153,11 @@ def main():
         verbose=1,
         tensorboard_log=os.path.join(log_dir, "tensorboard"),
         policy_kwargs=dict(activation_fn=get_activation_fn(args.activation)),
-        **config.dqn_kwargs(),
+        **{**config.dqn_kwargs(), "seed": args.seed},
     )
 
     model.learn(
-        total_timesteps=config.TOTAL_TIMESTEPS,
+        total_timesteps=args.timesteps,
         progress_bar=True,
         callback=CallbackList([ckpt_cb, eval_cb]),
     )
@@ -160,6 +166,9 @@ def main():
     model.save(os.path.join(log_dir, f"final_model_{stamp}"))
     print(f"\nSaved baseline model to {log_dir}")
     print("Best model (by eval reward) is at best_model.zip in the same dir.")
+
+    # Writes results.json: best eval reward + its timestep + wall-clock seconds.
+    run_tracking.finish_run(ctx)
 
     train_env.close()
     eval_env.close()

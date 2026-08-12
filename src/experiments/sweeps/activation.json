@@ -1,0 +1,8 @@
+{
+  "_comment": "Milestone 2 activation ablation. Agent and reward shaping are held fixed so the ONLY thing varying is the nonlinearity; two seeds per activation so plots.py can show mean +/- std across seeds. Run from src/: python -m experiments.sweep --config experiments/sweeps/activation.json --dry-run",
+  "agents": ["baseline_dqn"],
+  "activation": ["relu", "elu", "gelu", "mish"],
+  "reward_wrapper": ["off"],
+  "seed": [42, 43],
+  "timesteps": 750000
+}

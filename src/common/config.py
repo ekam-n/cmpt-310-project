@@ -45,6 +45,16 @@ EVAL_FREQ = 25_000          # run eval every N timesteps during training
 N_EVAL_EPISODES = 20        # episodes averaged per evaluation
 LAP_COMPLETE_PERCENT = 0.95  # % of tiles before a lap counts as complete
 
+# Fixed evaluation tracks. CarRacing generates a new random track per reset, so
+# evaluating two models on different tracks confounds the comparison with track
+# luck. Every model in the final comparison is rolled out on THESE 20 seeds, in
+# this order, so the numbers differ only by the agent. Do NOT edit this list
+# once results are collected -- it would invalidate every earlier comparison.
+EVAL_SEEDS = [
+    1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010,
+    1011, 1012, 1013, 1014, 1015, 1016, 1017, 1018, 1019, 1020,
+]
+
 # --- Paths ---
 LOG_ROOT = "./logs"
 
@@ -74,7 +84,7 @@ def dqn_kwargs():
     )
 
 def noisy_dqn_kwargs():
-    kwargs - dqn_kwargs()
+    kwargs = dqn_kwargs()
 
     kwargs["exploration_fraction"] = 0.0
     kwargs["exploration_initial_eps"] = 0.0

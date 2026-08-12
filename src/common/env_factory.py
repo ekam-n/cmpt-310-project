@@ -52,3 +52,23 @@ def make_vec(n_envs=None, seed=None, render_mode=None, use_reward_wrapper=True):
     venv = VecFrameStack(venv, n_stack=config.N_STACK)
     venv = VecTransposeImage(venv)   # HWC -> CHW for PyTorch CNN
     return venv
+
+
+def make_eval_vec(render_mode=None):
+    """Build THE canonical evaluation env -- use this for every comparison.
+
+    Two rules are baked in here so nobody has to remember them:
+
+      1. n_envs=1, because evaluate_agent() rolls out one episode at a time.
+      2. use_reward_wrapper=False, ALWAYS. Evaluation uses the env's native
+         reward, both so shaped and unshaped agents are scored on the same
+         scale and because evaluate.py detects collisions from the raw -100
+         death spike, which the shaping wrapper would mask.
+
+    Pair it with config.EVAL_SEEDS to also hold the tracks fixed:
+
+        env = make_eval_vec()
+        metrics = evaluate_agent(model, env, n_episodes=len(config.EVAL_SEEDS),
+                                 seeds=config.EVAL_SEEDS)
+    """
+    return make_vec(n_envs=1, render_mode=render_mode, use_reward_wrapper=False)
