@@ -127,35 +127,75 @@ same 20 fixed tracks (`config.EVAL_SEEDS`) so the comparison isn't confounded by
 track luck. For the canonical writeup figures, ONE machine should train all
 agents under the shared config and generate the figures in one place.
 
+### Analysis scripts (per-run diagnostics)
+
+Four standalone scripts in `src/` for digging into trained runs. All run from
+`src/`; where a run directory is expected, pass the whole
+`logs/<agent>/<settings>_<timestamp>/` path (the script loads its
+`best_model.zip`):
+
+```bash
+# watch a trained agent drive (window pops up):
+python watch.py logs/noisy_dqn/act-relu_rw-off_seed-1_20260806-0034
+python watch.py <run_dir> --seed 1001       # fixed track from EVAL_SEEDS
+python watch.py <run_dir> --headless        # no window; saves 3 PNG frames instead
+
+# first timestep each run reaches 90% of its best eval reward (scans all of logs/):
+python convergence.py [--thresh 0.9]
+
+# how close an agent gets to lap completion (tiles visited per episode):
+python check_tiles.py <run_dir> [--episodes 5]
+
+# driving pace + action mix for TWO agents on the SAME fixed eval tracks:
+python speed_check.py <run_dir_a> <run_dir_b> [--episodes 5]
+```
+
+`speed_check.py` and `check_tiles.py` pin tracks exactly the way
+`evaluate.py` does (`EVAL_SEEDS`, reward wrapper off, deterministic actions),
+so their numbers are directly comparable to the official evaluation.
+
 ---
 
 ## Project layout
 
 ```
-cmpt310-racecar/
+cmpt-310-project/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
+├── docs/
+│   └── EXPERIMENTS.md          # launching runs, sweeps, comparisons, tests
+├── notebooks/                  # scratch / exploration
+├── box2d/                      # copy of Gymnasium's CarRacing source (reference only — not imported)
 └── src/
     ├── common/
     │   ├── config.py           # SHARED hyperparameters — single source of truth
-    │   └── env_factory.py      # SHARED env construction (grayscale, frame stack)
-    │   └── activation_functions.py
-    │   └── fast_config.py
+    │   ├── env_factory.py      # SHARED env construction (grayscale, frame stack)
+    │   ├── activation_functions.py
+    │   ├── fast_config.py
+    │   ├── run_tracking.py     # per-run directories + run_config.json manifests
     │   └── visualize.py
     ├── envs/
-    │   └── reward_wrapper.py   # SHARED reward shaping (off by default)
+    │   └── reward_wrapper.py   # SHARED reward shaping (--reward-wrapper on/off)
     ├── baseline/
     │   └── train_baseline.py   # vanilla SB3 DQN — the reference to beat
     ├── agents/
-    │   ├── double_dqn.py       # Ekam + Lex (stub — to implement)
-    │   ├── dueling_dqn.py      # Hargun + Evan (stub — to implement)
-    │   ├── noisy_net.py        # Lex (stub — to implement)
+    │   ├── double_dqn.py       # Ekam + Lex
+    │   ├── dueling_dqn.py      # Hargun + Evan
+    │   ├── noisy_net.py        # Lex
     │   └── README.md           # ownership + conventions
     ├── evaluate/
-    │   └── evaluate.py         # SHARED metrics: reward, completion, collisions...
-    │   └── plots.py
-    └── notebooks/              # scratch / exploration
+    │   ├── evaluate.py         # SHARED metrics: reward, completion, collisions...
+    │   └── plots.py            # learning curves, comparison table, bar charts
+    ├── experiments/
+    │   ├── sweep.py            # batch-run many configs (see docs/EXPERIMENTS.md)
+    │   └── sweeps/             # sweep definitions (activation.json, ...)
+    ├── tests/                  # smoke tests — run before merging
+    ├── notes/                  # per-person scratch notes
+    ├── watch.py                # ┐
+    ├── convergence.py          # │ analysis scripts — see
+    ├── check_tiles.py          # │ "Analysis scripts" above
+    └── speed_check.py          # ┘
 ```
 
 ## Why it's structured this way
